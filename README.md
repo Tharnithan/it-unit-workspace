@@ -74,6 +74,6 @@ The MySQL integration test uses a temporary isolated database and deletes only t
 
 ## Current boundaries
 
-This is a local application, not a cloud deployment. Use one API process for this small workspace. Requests reload committed MySQL data and are serialized; writes use transactions and revision checks. The API waits for a successful commit before returning success. Failed writes roll back. It does not fall back to SQLite if MySQL is unavailable.
+The repository includes production settings for Render (`render.yaml`) and Cloudflare Pages (`cloudflare-pages.md`). Use one API process for this small workspace. Requests reload committed MySQL data and are serialized; writes use transactions and revision checks. The API waits for a successful commit before returning success. Failed writes roll back. It does not fall back to SQLite if MySQL is unavailable.
 
 Attachments, photos, password reset emails, frozen historical monthly reports and automatic task/meeting reminders are not implemented. Background web push requires VAPID keys, browser permission and HTTPS outside localhost. See `DEPLOYMENT.md` for hosting and push configuration.

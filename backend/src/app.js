@@ -8,7 +8,10 @@ import {canManage,canWork,publicUser,verify,hash,id,now,divisions} from './store
 import {setupPush} from './push.js';
 export function createApp(store){const app=express();const {db,save}=store;
  const push=setupPush(store);app.locals.push=push;
- app.use(helmet());app.use(express.json({limit:'100kb'}));app.use('/api',rateLimit({windowMs:60000,limit:300}));
+ app.use(helmet());app.use(express.json({limit:'100kb'}));
+ const allowedOrigins=(process.env.CORS_ORIGINS||'').split(',').map(origin=>origin.trim()).filter(Boolean);
+ app.use((req,res,next)=>{const origin=req.headers.origin;if(origin&&allowedOrigins.includes(origin)){res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');res.setHeader('Access-Control-Allow-Headers','Content-Type, Authorization');res.setHeader('Access-Control-Allow-Methods','GET,POST,PATCH,PUT,DELETE,OPTIONS')}if(req.method==='OPTIONS')return res.sendStatus(204);next()});
+ app.use('/api',rateLimit({windowMs:60000,limit:300}));
  // Serialize each unit of work and reload committed MySQL data before authorization.
  app.use('/api',async (req,res,next)=>{
   if(!store.acquire)return next();

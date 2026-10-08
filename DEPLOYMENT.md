@@ -13,13 +13,13 @@ Use `npm run db:setup --workspace backend` to initialize a new installation. Set
 ## Online deployment
 
 1. Store source in a private GitHub repository, excluding environment files, database files and exports.
-2. Provision a durable MySQL/MariaDB database, import a phpMyAdmin SQL export, and create a restricted app login. Add database TLS configuration using the hosting provider's CA; local connection settings do not configure remote TLS.
-3. Host Express on a Node.js service. Set `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD` and `PORT`. Update the server listening address as required by the host; local mode binds to loopback.
-4. Build with `npm run build` and serve `frontend/dist`. A production reverse proxy must route `/api` to Express; Vite's development proxy is not included in the static build. For separate origins, configure an API base URL and restricted CORS.
+2. Provision a durable hosted MySQL/MariaDB database. Aiven's free MySQL tier advertises 1 GB storage; import a phpMyAdmin SQL export and create a restricted app login. Add TLS using the provider's CA. XAMPP is local and cannot be reached by a cloud server.
+3. In Render, create a Web Service from the GitHub repository using `render.yaml`, or set root directory `backend`, build `npm install`, start `npm start`, and health path `/api/health`. Set MySQL and VAPID variables privately. Free services sleep after 15 minutes; their local filesystem is ephemeral, while this app stores data in MySQL.
+4. In Cloudflare Pages, connect the repository with root directory `frontend`, build `npm run build`, output `dist`, and set `VITE_API_URL` to the Render backend URL. Add the exact Pages URL to Render's `CORS_ORIGINS`.
 5. Serve HTTPS, replace demonstration passwords, prepare secure sessions and account recovery, and test permissions and backups before external use.
 6. Run a single API process with this repository implementation. Its request queue and database revision check are designed for a small workspace, not distributed deployment.
 
-GitHub Pages can host the frontend only. Supabase is an alternative requiring a separate PostgreSQL/authentication migration. No cloud service has been deployed.
+GitHub Pages can host static frontend files only. Supabase is an alternative requiring a separate PostgreSQL/authentication migration. No cloud service has been deployed yet.
 
 ## Web push
 
