@@ -1,0 +1,24 @@
+// This schema is also exported to backend/sql/schema.sql for phpMyAdmin.
+const id='VARCHAR(64)';
+const str='VARCHAR(200)';
+const date='DATETIME(3)';
+const required=type=>`${type} NOT NULL`;
+const fk=(column,parent)=>`FOREIGN KEY (\`${column}\`) REFERENCES \`${parent}\` (\`id\`)`;
+function table(name,keys,columns,constraints=[]){return {name,keys,columns:Object.entries(columns),constraints}}
+export const tables=[
+ table('users',['id'],{id:required(id),name:required(str),designation:required(str),role:"ENUM('employee','sdd','admin') NOT NULL",username:'VARCHAR(200) NOT NULL UNIQUE',email:required(str),phone:required(str),active:'BOOLEAN NOT NULL',password_hash:'VARCHAR(300) NOT NULL',position:'INT NOT NULL'}),
+ table('tasks',['id'],{id:required(id),title:required(str),description:'TEXT NOT NULL',division:required(str),assignee_id:required(id),status:"ENUM('Assigned','In Progress','Blocked','Completed') NOT NULL",progress:'DECIMAL(5,2) NOT NULL',priority:"ENUM('Low','Medium','High') NOT NULL",due_date:'DATE NOT NULL',created_at:required(date),created_by:required(id),completed_at:date,completed_by:id,resolution:'TEXT NOT NULL',completion_employee_name:str,completion_division:str,deleted:'BOOLEAN NOT NULL DEFAULT FALSE',position:'INT NOT NULL'},[fk('assignee_id','users'),fk('created_by','users'),fk('completed_by','users'),'CHECK (progress BETWEEN 0 AND 100)','INDEX tasks_assignee_status (assignee_id,status)','INDEX tasks_completed (completed_at)']),
+ table('task_updates',['task_id','position'],{task_id:required(id),position:'INT NOT NULL',id:required(id),actor_id:required(id),note:'TEXT NOT NULL',progress:'DECIMAL(5,2) NOT NULL',status:required(str),created_at:required(date)},[fk('task_id','tasks'),fk('actor_id','users')]),
+ table('task_events',['task_id','position'],{task_id:required(id),position:'INT NOT NULL',status:required(str),created_at:required(date),actor_id:required(id),assignee_id:required(id)},[fk('task_id','tasks'),fk('actor_id','users'),fk('assignee_id','users')]),
+ table('conversations',['id'],{id:required(id),name:required(str),type:"ENUM('direct','group') NOT NULL",position:'INT NOT NULL'}),
+ table('conversation_members',['conversation_id','user_id'],{conversation_id:required(id),user_id:required(id),position:'INT NOT NULL'},[fk('conversation_id','conversations'),fk('user_id','users')]),
+ table('messages',['id'],{id:required(id),conversation_id:required(id),sender_id:required(id),body:'TEXT NOT NULL',sent_at:required(date),edited_at:date,position:'INT NOT NULL'},[fk('conversation_id','conversations'),fk('sender_id','users'),'INDEX messages_conversation (conversation_id,sent_at)']),
+ table('meetings',['id'],{id:required(id),title:required(str),agenda:'TEXT NOT NULL',starts_at:required(date),location:'VARCHAR(500) NOT NULL',created_by:required(id),cancelled:'BOOLEAN NOT NULL',position:'INT NOT NULL'},[fk('created_by','users')]),
+ table('meeting_attendees',['meeting_id','user_id'],{meeting_id:required(id),user_id:required(id),response:"ENUM('Accepted','Declined') NULL",position:'INT NOT NULL'},[fk('meeting_id','meetings'),fk('user_id','users')]),
+ table('notifications',['id'],{id:required(id),recipient_id:required(id),title:required(str),body:'TEXT NOT NULL',is_read:'BOOLEAN NOT NULL',created_at:required(date),position:'INT NOT NULL'},[fk('recipient_id','users'),'INDEX notifications_recipient (recipient_id,is_read)']),
+ table('audit_log',['id'],{id:required(id),actor_id:required(id),action:required(str),record_id:required(str),created_at:required(date),position:'INT NOT NULL'},[fk('actor_id','users')]),
+ table('sessions',['token'],{token:'VARCHAR(128) NOT NULL',user_id:required(id),expires_at:required(date),position:'INT NOT NULL'},[fk('user_id','users')]),
+ table('push_subscriptions',['endpoint_hash'],{endpoint_hash:'CHAR(64) NOT NULL',user_id:required(id),endpoint:'TEXT NOT NULL',p256dh:'TEXT NOT NULL',auth:'VARCHAR(200) NOT NULL',expiration_time:'BIGINT NULL',position:'INT NOT NULL'},[fk('user_id','users')]),
+ table('push_outbox',['id'],{id:required(id),recipient_id:required(id),title:required(str),attempts:'INT NOT NULL',next_attempt_at:required(date),position:'INT NOT NULL'},[fk('recipient_id','users')])
+];
+export const schema=`-- IT Unit Workspace relational MySQL / MariaDB schema\n-- Select the application database before running. All timestamps are UTC.\nCREATE TABLE IF NOT EXISTS workspace_meta (id INT PRIMARY KEY, revision BIGINT NOT NULL) ENGINE=InnoDB;\nINSERT IGNORE INTO workspace_meta (id,revision) VALUES (1,0);\n`+tables.map(t=>`CREATE TABLE IF NOT EXISTS \`${t.name}\` (\n  ${[...t.columns.map(([c,type])=>`\`${c}\` ${type}`),`PRIMARY KEY (${t.keys.map(c=>'`'+c+'`').join(',')})`,...t.constraints].join(',\n  ')}\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`).join('\n\n');

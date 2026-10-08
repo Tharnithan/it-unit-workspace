@@ -1,0 +1,21 @@
+{
+  "name": "backend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test tests/*.test.js",
+    "push:keys": "node src/push-keys.js",
+    "db:setup": "node scripts/setup-mysql.js",
+    "test:mysql": "node scripts/test-mysql.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.1.0",
+    "mysql2": "^3.24.5",
+    "web-push": "^3.6.7"
+  }
+}

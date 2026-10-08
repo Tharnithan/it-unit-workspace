@@ -1,0 +1,1 @@
+{"name":"it-unit-workspace","private":true,"scripts":{"dev":"node scripts/dev.js","build":"npm run build --workspace frontend","test":"npm test --workspace backend"},"workspaces":["frontend","backend"]}

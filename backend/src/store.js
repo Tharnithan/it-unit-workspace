@@ -1,0 +1,25 @@
+import {readFileSync,mkdirSync,existsSync} from 'node:fs';
+import {DatabaseSync} from 'node:sqlite';
+import {dirname} from 'node:path';
+import {randomUUID,scryptSync,randomBytes,timingSafeEqual} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
+export const divisions=['Scientific Standardization','Engineering Standardization','Product Certification','Systems Certification','Quality Assurance','Laboratory Services','Metrology','Standards & Services Promotion','Documentation & Information'];
+export const hash=password=>{const salt=randomBytes(16).toString('hex');return salt+':'+scryptSync(password,salt,64).toString('hex')};
+export const verify=(password,stored)=>{const [salt,key]=stored.split(':');const a=Buffer.from(key,'hex');const b=scryptSync(password,salt,64);return a.length===b.length&&timingSafeEqual(a,b)};
+export const id=()=>randomUUID();
+export const now=()=>new Date().toISOString();
+export function seed(){
+ const names=[['Mr. Kanchana','SDD','sdd'],['Mr. Insaf','Technical Assistant','employee'],['Mr. Damith','Technical Assistant','employee'],['Mr. Tharindu','Technician','employee'],['Ms. Kinkini','Software Assistant','employee'],['Ms. Ayali','Management Assistant','employee'],['Mrs. Kumari','Management Assistant','employee'],['Mr. Lakshitha','SE Intern','employee'],['T. Tharnithan','SE Intern','employee'],['Mr. Nisal','SE Intern','employee'],['Mr. Sumeshan','Designation pending','employee'],['Administrator','System Administrator','admin']];
+ const password=process.env.INITIAL_PASSWORD||'ITunit-demo-2026!';
+ const users=names.map(([name,title,role],i)=>({id:'u'+i,name,title,role,username:i===11?'admin':'itunit'+(i+1),email:'',phone:'',active:true,password:hash(password)}));
+ const tasks=[['Restore laboratory network access','Laboratory Services','u1','In Progress',65,'High'],['Update certification portal','Product Certification','u4','In Progress',40,'High'],['Prepare monthly IT inventory','Documentation & Information','u5','Assigned',0,'Medium'],['Calibrate workstation connectivity','Metrology','u3','Blocked',25,'Medium'],['Deploy endpoint security updates','Engineering Standardization','u2','Completed',100,'High'],['Review support knowledge base','Quality Assurance','u7','Assigned',0,'Low']].map(([title,division,assignee,status,progress,priority],i)=>({id:'t'+i,title,division,assignee,status,progress,priority,description:'Sample task for reviewing the IT unit workflow. Replace with real work before use.',due:new Date(Date.now()+(i-1)*86400000).toISOString().slice(0,10),createdAt:now(),createdBy:'u0',completedAt:status==='Completed'?now():null,completedBy:status==='Completed'?'u2':null,resolution:status==='Completed'?'Sample completion record.':'',updates:[],events:[{status,at:now(),actor:'u0',assignee}]}));
+ return {users,tasks,meetings:[{id:'m1',title:'Weekly IT coordination',agenda:'Review current assignments, blockers and priorities.',start:new Date(Date.now()+86400000).toISOString(),location:'IT Division meeting room',attendees:users.filter(u=>u.role!=='admin').map(u=>u.id),responses:{},createdBy:'u0',cancelled:false}],conversations:[{id:'unit',name:'IT unit',type:'group',members:users.map(u=>u.id)}],messages:[{id:'msg1',conversation:'unit',sender:'u0',body:'Welcome to the IT unit workspace. Please keep your task progress up to date.',at:now()}],notifications:[{id:'n1',recipient:'u0',title:'Your workspace is ready',body:'Review the sample tasks and confirm the team directory.',read:false,at:now()}],audit:[],sessions:[]};
+}
+export function createStore(path=process.env.DATA_FILE||fileURLToPath(new URL('../data/workspace.sqlite',import.meta.url))){mkdirSync(dirname(path),{recursive:true});const sqlite=new DatabaseSync(path);sqlite.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
+ const entities=['users','tasks','meetings','conversations','messages','notifications','audit','sessions','pushSubscriptions','pushOutbox'];
+ for(const entity of entities)sqlite.exec(`CREATE TABLE IF NOT EXISTS "${entity}" (id TEXT PRIMARY KEY, data TEXT NOT NULL CHECK(json_valid(data)))`);
+ let db;if(sqlite.prepare('SELECT count(*) AS count FROM users').get().count){db=Object.fromEntries(entities.map(entity=>[entity,sqlite.prepare(`SELECT data FROM "${entity}" ORDER BY rowid`).all().map(row=>JSON.parse(row.data))]))}else {const legacy=fileURLToPath(new URL('../data/workspace.json',import.meta.url));db=existsSync(legacy)?JSON.parse(readFileSync(legacy,'utf8')):seed()}
+ const save=()=>{sqlite.exec('BEGIN IMMEDIATE');try{for(const entity of entities){sqlite.exec(`DELETE FROM "${entity}"`);const insert=sqlite.prepare(`INSERT INTO "${entity}" (id,data) VALUES (?,?)`);for(const [index,record] of (db[entity]||[]).entries())insert.run(record.id||record.token||record.subscription?.endpoint||String(index),JSON.stringify(record))}sqlite.exec('COMMIT')}catch(e){sqlite.exec('ROLLBACK');throw e}};save();return {db,save,close:()=>sqlite.close()};}
+export const canManage=u=>u.role==='sdd'||u.role==='admin';
+export const canWork=(u,t)=>canManage(u)||t.assignee===u.id;
+export const publicUser=({password,...u})=>u;

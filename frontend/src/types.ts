@@ -1,0 +1,4 @@
+export type User={id:string;name:string;title:string;username:string;email:string;phone:string;role:string;active:boolean};
+export type Task={id:string;title:string;description:string;division:string;assignee:string;status:string;progress:number;priority:string;due:string;completedAt:string|null;resolution:string;completionSnapshot?:{name:string};updates:{actor:string;note:string;at:string;status:string;progress:number}[]};
+export type Meeting={id:string;title:string;agenda:string;start:string;location:string;attendees:string[];responses:Record<string,string>;cancelled:boolean};
+export type Workspace={user:User;users:User[];divisions:string[];tasks:Task[];meetings:Meeting[];conversations:{id:string;name:string;type:string;members:string[]}[];messages:{id:string;sender:string;body:string;conversation:string;at:string}[];notifications:{id:string;title:string;body:string;read:boolean;at:string}[];audit:{id:string;action:string;actor:string;at:string}[]};

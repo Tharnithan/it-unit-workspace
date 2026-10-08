@@ -1,0 +1,2 @@
+self.addEventListener('push',event=>{let data={};try{data=event.data.json()}catch{}event.waitUntil(self.registration.showNotification(data.title||'IT Unit Workspace',{body:data.body||'You have a new update.',tag:'it-unit-update',data:{url:'/'}}))});
+self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(windows=>{const existing=windows.find(w=>new URL(w.url).origin===self.location.origin);if(existing)return existing.focus();return clients.openWindow('/')}))});

@@ -1,0 +1,10 @@
+import {canManage,canWork,publicUser,hash,id,now,divisions} from '../store.js';
+export function registerChatRoutes(app,context){
+ const {db,save,error,text,note,audit}=context;
+ app.post('/api/conversations',async (req,res)=>{const other=db.users.find(u=>u.id===req.body.member&&u.active&&u.id!==req.user.id);if(!other)return error(res,400,'Choose an active team member');let c=db.conversations.find(c=>c.type==='direct'&&c.members.includes(other.id)&&c.members.includes(req.user.id));if(!c){c={id:id(),type:'direct',name:other.name,members:[req.user.id,other.id]};db.conversations.push(c);await save()}res.json(c)});
+ app.post('/api/messages',async (req,res)=>{const c=db.conversations.find(c=>c.id===req.body.conversation&&c.members.includes(req.user.id));const body=text(req.body.body,4000);if(!c)return error(res,403,'Conversation access denied');if(!body)return error(res,400,'Write a message');const m={id:id(),conversation:c.id,sender:req.user.id,body,at:now()};db.messages.push(m);note(c.members.filter(x=>x!==req.user.id),'New message',c.type==='group'?'IT unit group message':'Private message');await save();res.status(201).json(m)});
+ app.delete('/api/messages/:id',async (req,res)=>{if(req.user.role!=='admin')return error(res,403,'Administrator access required');db.messages=db.messages.filter(m=>m.id!==req.params.id);audit(req.user,'message.removed',req.params.id);await save();res.json({ok:true})});
+ app.patch('/api/messages/:id',async (req,res)=>{if(req.user.role!=='admin')return error(res,403,'Administrator access required');const m=db.messages.find(m=>m.id===req.params.id);if(!m)return error(res,404,'Message not found');if(!text(req.body.body,4000))return error(res,400,'Write a message');m.body=text(req.body.body,4000);m.editedAt=now();audit(req.user,'message.edited',m.id);await save();res.json(m)});
+ app.get('/api/admin/messages',async (req,res)=>{if(req.user.role!=='admin')return error(res,403,'Administrator access required');audit(req.user,'messages.moderation_view','all');await save();res.json(db.messages)});
+}
+

@@ -1,0 +1,7 @@
+import webpush from 'web-push';
+export function setupPush(store){const enabled=!!(process.env.VAPID_PUBLIC_KEY&&process.env.VAPID_PRIVATE_KEY&&process.env.VAPID_SUBJECT);if(enabled)webpush.setVapidDetails(process.env.VAPID_SUBJECT,process.env.VAPID_PUBLIC_KEY,process.env.VAPID_PRIVATE_KEY);store.db.pushSubscriptions??=[];store.db.pushOutbox??=[];
+ const queue=(notification)=>{if(enabled){store.db.pushOutbox.push({id:notification.id,recipient:notification.recipient,title:notification.title,attempts:0,next:Date.now()})}};
+ let running=false;
+ async function flush(){if(!enabled||running)return;running=true;let release;try{release=await store.acquire?.();for(const event of store.db.pushOutbox.filter(x=>x.next<=Date.now())){const subs=store.db.pushSubscriptions.filter(s=>s.userId===event.recipient&&store.db.users.some(u=>u.id===s.userId&&u.active));let retry=false;for(const sub of subs){try{await webpush.sendNotification(sub.subscription,JSON.stringify({title:event.title,body:'You have an update in your IT workspace.',url:'/'}),{TTL:3600,timeout:5000})}catch(e){if([404,410].includes(e.statusCode))store.db.pushSubscriptions=store.db.pushSubscriptions.filter(s=>s!==sub);else retry=true}}if(retry&&event.attempts<4){event.attempts++;event.next=Date.now()+60000*2**event.attempts}else store.db.pushOutbox=store.db.pushOutbox.filter(x=>x.id!==event.id)}await store.save()}finally{release?.();running=false}}
+ return {enabled,queue,flush};
+}
