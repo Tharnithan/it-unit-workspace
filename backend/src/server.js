@@ -12,4 +12,4 @@ try{
  let stopping=false;
  async function stop(){if(stopping)return;stopping=true;clearInterval(timer);server.close(async()=>{await store.close();process.exit(0)})}
  process.on('SIGINT',stop);process.on('SIGTERM',stop);
-}catch(error){console.error('Backend startup failed:',error.message);console.error('Start MySQL in XAMPP and check backend/.env.');process.exitCode=1}
+}catch(error){console.error('Backend startup failed:',error.message);console.error('Check MySQL host, port, credentials, TLS certificate and database tables.');process.exitCode=1}

@@ -4,3 +4,5 @@ backend/data/*.json
 backend/data/*.sqlite*
 .env
 *.log
+.env.aiven
+backend/ca.pem
