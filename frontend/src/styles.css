@@ -13,3 +13,6 @@
 
 /* Official SLSI identity; preserve the supplied logo proportions. */
 .brand,.login-brand{flex-direction:column;align-items:flex-start;gap:12px;letter-spacing:0}.brand{margin:0 0 30px}.slsi-logo{display:block;width:100%;height:auto;object-fit:contain}.brand .slsi-logo{max-width:197px}.login-brand .slsi-logo{width:310px;max-width:100%}.unit-label{font-size:15px;font-weight:650;color:var(--navy);line-height:1.4}.login-brand .unit-label{font-size:17px}.login-brand{max-width:100%}
+
+.mobile-company-logo{display:none}.verification-page{padding:32px clamp(20px,7vw,100px)}.loading-brand{width:min(310px,85vw);text-align:center}.loading-brand p{margin-top:24px}
+@media(max-width:760px){.topbar{height:auto;min-height:62px;flex-wrap:wrap;padding-top:12px;padding-bottom:12px;gap:14px}.mobile-company-logo{display:block;width:220px;max-width:100%;height:auto;margin-right:calc(100% - 220px)}.breadcrumb{min-width:0;flex-wrap:wrap}.top-actions{gap:12px;margin-left:auto}}
