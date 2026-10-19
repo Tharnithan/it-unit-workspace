@@ -1,0 +1,10 @@
+export type Request=(path:string,method?:string,body?:unknown)=>Promise<any>;
+export type Download=(id:string,name:string)=>Promise<void>;
+export type Asset={id:string;name:string;serial:string;assignee:string;warranty:string;status:string;history:{at:string;actor:string;note:string;status:string}[]};
+export type ServiceRequest={id:string;number:string;title:string;description:string;division:string;category:string;assetId:string;requester:string;status:string;taskId:string|null;at:string};
+export type Article={id:string;title:string;body:string;owner:string;updatedAt:string;published:boolean;version:number};
+export type Schedule={id:string;title:string;description:string;assignee:string;division:string;priority:string;nextDate:string;frequency:string;dueDays:number;active:boolean};
+export type Preferences={muted:string[];quietStart:string;quietEnd:string;availability:string};
+export type Approval={key:string;status:string;note:string;submittedAt:string;reviewNote?:string};
+export type OfficeData={requests:ServiceRequest[];assets:Asset[];articles:Article[];schedules:Schedule[];preferences:Preferences;workload:{id:string;name:string;availability:string;active:number;overdue:number}[];report:{completed:number;unresolved:number;averageHours:number|null;categories:Record<string,number>};approvals:Approval[];backup:{configured:boolean;last:string|null}|null};
+export type Attachment={id:string;name:string;size:number;actor:string};

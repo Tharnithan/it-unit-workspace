@@ -2,6 +2,14 @@
 -- Select the application database before running. All timestamps are UTC.
 CREATE TABLE IF NOT EXISTS workspace_meta (id INT PRIMARY KEY, revision BIGINT NOT NULL) ENGINE=InnoDB;
 INSERT IGNORE INTO workspace_meta (id,revision) VALUES (1,0);
+CREATE TABLE IF NOT EXISTS `workspace_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `kind` VARCHAR(200) NOT NULL,
+  `payload` LONGTEXT NOT NULL,
+  `position` INT NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `users` (
   `id` VARCHAR(64) NOT NULL,
   `name` VARCHAR(200) NOT NULL,
@@ -12,6 +20,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `phone` VARCHAR(200) NOT NULL,
   `active` BOOLEAN NOT NULL,
   `password_hash` VARCHAR(300) NOT NULL,
+  `email_verification` TEXT NULL,
   `position` INT NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

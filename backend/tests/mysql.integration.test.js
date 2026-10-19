@@ -24,6 +24,7 @@ test('MySQL stores API work, isolates concurrent requests, rolls back failures a
   const task=await call('/tasks','POST',{title,description:'Integration test',assignee:'u1',division:'Laboratory Services',due:'2026-12-31',priority:'High'},sdd);
   assert.equal(task.status,201);
   const complete=await call('/tasks/'+task.body.id,'PATCH',{status:'Completed',note:'Verified on MySQL'},employee);assert.equal(complete.status,200);
+  assert.equal((await call('/tasks/'+task.body.id+'/review','POST',{decision:'Approve',note:'Reviewed on MySQL'},sdd)).status,200);
   const [stored]=await admin.execute(`SELECT title,status,resolution FROM \`${database}\`.tasks WHERE id=?`,[task.body.id]);
   assert.equal(stored[0].title,title);assert.equal(stored[0].status,'Completed');assert.equal(stored[0].resolution,'Verified on MySQL');
   const [events]=await admin.execute(`SELECT * FROM \`${database}\`.task_events WHERE task_id=?`,[task.body.id]);assert.equal(events.length,2);

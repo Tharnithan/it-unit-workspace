@@ -7,7 +7,10 @@ test('API enforces task ownership, completion notes, private chat and directory 
  assert.equal((await call('/tasks/t0','PATCH',{status:'Completed',note:'done'},damith)).status,403);
  assert.equal((await call('/tasks/t0','PATCH',{status:'Completed'},insaf)).status,400);
  assert.equal((await call('/tasks/t0','PATCH',{status:'Completed',note:'Network restored'},insaf)).status,200);
- assert.equal(db.tasks[0].completedBy,'u1');assert.equal(db.tasks[0].progress,100);
+ assert.equal(db.tasks[0].completedAt,null);
+ assert.equal((await call('/tasks/t0/review','POST',{decision:'Approve',note:'SDD verified'},insaf)).status,403);
+ assert.equal((await call('/tasks/t0/review','POST',{decision:'Approve',note:'SDD verified'},sdd)).status,200);
+ assert.equal(db.tasks[0].completedBy,'u0');assert.equal(db.tasks[0].progress,100);
  assert.equal((await call('/tasks/t0','PATCH',{status:'Assigned',note:'Recheck'},insaf)).status,403);
  assert.equal((await call('/tasks/t0','PATCH',{status:'Assigned',note:'Recheck'},sdd)).status,200);
  assert.equal((await call('/tasks/t0','PATCH',{assignee:'u2'},sdd)).status,200);

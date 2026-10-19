@@ -9,7 +9,10 @@
     "test": "node --test tests/*.test.js",
     "push:keys": "node src/push-keys.js",
     "db:setup": "node scripts/setup-mysql.js",
-    "test:mysql": "node scripts/test-mysql.js"
+    "test:mysql": "node scripts/test-mysql.js",
+    "db:upgrade": "node scripts/upgrade-workspace-schema.js",
+    "backup": "node scripts/backup-workspace.js",
+    "maintenance": "node scripts/run-maintenance.js"
   },
   "dependencies": {
     "express": "^5.1.0",

@@ -6,7 +6,7 @@ const iso=value=>value==null?null:new Date(value.replace(' ','T')+'Z').toISOStri
 const hash=value=>createHash('sha256').update(value).digest('hex');
 export function toRecords(db){
  const rows=Object.fromEntries(tables.map(t=>[t.name,[]]));
- for(const [position,u] of db.users.entries())rows.users.push({id:u.id,name:u.name,designation:u.title,role:u.role,username:u.username,email:u.email||'',phone:u.phone||'',active:Number(u.active),password_hash:u.password,position});
+ for(const [position,u] of db.users.entries())rows.users.push({id:u.id,name:u.name,designation:u.title,role:u.role,username:u.username,email:u.email||'',phone:u.phone||'',active:Number(u.active),password_hash:u.password,email_verification:u.emailVerification?JSON.stringify(u.emailVerification):null,position});
  for(const [position,t] of db.tasks.entries()){
   rows.tasks.push({id:t.id,title:t.title,description:t.description||'',division:t.division,assignee_id:t.assignee,status:t.status,progress:Number(t.progress),priority:t.priority,due_date:t.due,created_at:sqlDate(t.createdAt),created_by:t.createdBy,completed_at:sqlDate(t.completedAt),completed_by:t.completedBy||null,resolution:t.resolution||'',completion_employee_name:t.completionSnapshot?.name||null,completion_division:t.completionSnapshot?.division||null,deleted:Number(!!t.deleted),position});
   for(const [i,u] of (t.updates||[]).entries())rows.task_updates.push({task_id:t.id,position:i,id:u.id||`${t.id}-${i}`,actor_id:u.actor,note:u.note||'',progress:Number(u.progress),status:u.status,created_at:sqlDate(u.at)});
@@ -26,11 +26,12 @@ export function toRecords(db){
  for(const [position,s] of db.sessions.entries())rows.sessions.push({token:s.token,user_id:s.userId,expires_at:sqlDate(s.expires),position});
  for(const [position,s] of (db.pushSubscriptions||[]).entries())rows.push_subscriptions.push({endpoint_hash:hash(s.subscription.endpoint),user_id:s.userId,endpoint:s.subscription.endpoint,p256dh:s.subscription.keys.p256dh,auth:s.subscription.keys.auth,expiration_time:s.subscription.expirationTime??null,position});
  for(const [position,n] of (db.pushOutbox||[]).entries())rows.push_outbox.push({id:n.id,recipient_id:n.recipient,title:n.title,attempts:n.attempts,next_attempt_at:sqlDate(n.next),position});
+ for(const [position,item] of (db.workspaceItems||[]).entries())rows.workspace_items.push({id:item.id,kind:item.kind,payload:JSON.stringify(item),position});
  return rows;
 }
 export function fromRecords(rows){
  const db={users:[],tasks:[],conversations:[],messages:[],meetings:[],notifications:[],audit:[],sessions:[],pushSubscriptions:[],pushOutbox:[]};
- db.users=rows.users.map(u=>({id:u.id,name:u.name,title:u.designation,role:u.role,username:u.username,email:u.email,phone:u.phone,active:!!u.active,password:u.password_hash}));
+ db.users=rows.users.map(u=>({id:u.id,name:u.name,title:u.designation,role:u.role,username:u.username,email:u.email,phone:u.phone,active:!!u.active,password:u.password_hash,...(u.email_verification?{emailVerification:JSON.parse(u.email_verification)}:{})}));
  db.tasks=rows.tasks.map(t=>({id:t.id,title:t.title,description:t.description,division:t.division,assignee:t.assignee_id,status:t.status,progress:Number(t.progress),priority:t.priority,due:t.due_date,createdAt:iso(t.created_at),createdBy:t.created_by,completedAt:iso(t.completed_at),completedBy:t.completed_by,resolution:t.resolution,deleted:!!t.deleted,...(t.completion_employee_name?{completionSnapshot:{name:t.completion_employee_name,division:t.completion_division}}:{}),updates:rows.task_updates.filter(u=>u.task_id===t.id).map(u=>({id:u.id,actor:u.actor_id,note:u.note,progress:Number(u.progress),status:u.status,at:iso(u.created_at)})),events:rows.task_events.filter(e=>e.task_id===t.id).map(e=>({status:e.status,at:iso(e.created_at),actor:e.actor_id,assignee:e.assignee_id}))}));
  db.conversations=rows.conversations.map(c=>({id:c.id,name:c.name,type:c.type,members:rows.conversation_members.filter(m=>m.conversation_id===c.id).map(m=>m.user_id)}));
  db.messages=rows.messages.map(m=>({id:m.id,conversation:m.conversation_id,sender:m.sender_id,body:m.body,at:iso(m.sent_at),...(m.edited_at?{editedAt:iso(m.edited_at)}:{})}));
@@ -40,5 +41,6 @@ export function fromRecords(rows){
  db.sessions=rows.sessions.map(s=>({token:s.token,userId:s.user_id,expires:Date.parse(iso(s.expires_at))}));
  db.pushSubscriptions=rows.push_subscriptions.map(s=>({userId:s.user_id,subscription:{endpoint:s.endpoint,expirationTime:s.expiration_time==null?null:Number(s.expiration_time),keys:{p256dh:s.p256dh,auth:s.auth}}}));
  db.pushOutbox=rows.push_outbox.map(n=>({id:n.id,recipient:n.recipient_id,title:n.title,attempts:n.attempts,next:Date.parse(iso(n.next_attempt_at))}));
+ db.workspaceItems=(rows.workspace_items||[]).map(row=>JSON.parse(row.payload));
  return db;
 }

@@ -6,3 +6,8 @@ backend/data/*.sqlite*
 *.log
 .env.aiven
 backend/ca.pem
+
+# Encrypted recovery artifacts and private export files
+*.backup
+*.backup.tmp
+backend/backups/

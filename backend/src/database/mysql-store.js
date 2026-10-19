@@ -7,6 +7,11 @@ const key=(table,row)=>JSON.stringify(table.keys.map(k=>row[k]));
 export async function createMySQLStore(config=mysqlConfig(),{initialize=false}={}){
  const connection=await mysql.createConnection(config);
  try{if(initialize)for(const statement of schema.split(';').filter(s=>s.trim()))await connection.query(statement)}catch(e){await connection.end();throw e}
+ try{
+  const [columns]=await connection.query("SHOW COLUMNS FROM users LIKE 'email_verification'");
+  if(!columns.length)throw new Error('Email verification schema upgrade required: run node backend/scripts/upgrade-email-schema.js against this database before starting the new backend.');
+ }catch(e){await connection.end();throw e}
+ try{await connection.query('SELECT id FROM workspace_items LIMIT 0')}catch(e){await connection.end();throw new Error('Workspace schema upgrade required: run node backend/scripts/upgrade-workspace-schema.js before starting this version.')}
  const db={};let baseline={};let revision=0;let pending=Promise.resolve();
  async function refresh(){
   await connection.beginTransaction();

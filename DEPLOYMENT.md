@@ -29,4 +29,50 @@ In Settings select Enable push notifications. localhost supports development tes
 
 ## Backups
 
+## Office email verification (Render + Vercel)
+
+The app supports one-time ownership verification of the saved `@slsi.lk` mailbox. It is not an email password reset or a code on every login. Codes expire after ten minutes, allow five attempts, and have a one-minute resend cooldown and five-send hourly limit. Only salted code hashes are stored. Changing the office address clears verification and revokes that employee's sessions. Employees cannot choose a different recipient at the verification screen.
+
+### Upgrade before deploying this version
+
+From `F:\Projects\SLSI`, with the existing private `backend/.env.aiven` and CA certificate, run:
+
+```powershell
+node backend/scripts/upgrade-email-schema.js --aiven
+```
+
+This adds a nullable column to the existing cloud users table, without replacing users or other records. It is safe to rerun. Do not rerun the original data-copy migration. For a local database, run the same command without `--aiven` using a MySQL account with ALTER permission; the restricted local app account may not have that permission. New databases created from schema.sql already include the column.
+
+### Configure delivery
+
+Create a Resend account and verify a sender domain you are authorized to manage, following https://resend.com/docs/dashboard/domains/introduction. Sending from `slsi.lk` requires your domain administrator to add its DNS records. The sender may use another verified domain you control; recipients remain restricted to `@slsi.lk`. The default testing sender is not suitable for delivery to all employees. No office mailbox password is required by this implementation.
+
+Set these in Render's backend Environment, never in Vercel or Git:
+
+```text
+RESEND_API_KEY=<your private sending API key>
+EMAIL_FROM=IT Unit <verification@your-verified-domain>
+EMAIL_VERIFICATION_REQUIRED=false
+```
+
+Push the code and redeploy Render and Vercel. In Team, the administrator or SDD must enter each employee's actual, unique office email. In Settings, test Send verification code and Verify email with a real mailbox. Successful API acceptance alone does not prove inbox delivery; check the inbox/spam folder and provider delivery logs.
+
+After the delivery test succeeds and all employee addresses are correct, set `EMAIL_VERIFICATION_REQUIRED=true` in Render and redeploy. Unverified SDD and employee accounts then see a verification screen and cannot access workspace APIs, including through existing sessions. Administrators remain able to access the workspace to repair email configuration and staff addresses; they can verify their own mailbox in Settings. Keep administrator credentials secure. This exception is intentional for recovery.
+
+The mail API currently runs within the app's serialized request queue and has a ten-second timeout; a slow provider can briefly delay other requests. Actual provider delivery must be verified after configuration.
+
 Export all tables of `it_unit_workspace` as SQL in phpMyAdmin. Exports include private chat, account hashes and session records, so store them securely. Test restores in a separate database. The old SQLite file is a migration backup and receives no new writes.
+
+## Ended tasks and page navigation
+
+The sidebar Ended Tasks section reads `GET /api/tasks/ended` with optional `search`, `month` (YYYY-MM in Asia/Colombo), `offset`, and `limit` (1–100). Only non-deleted Completed tasks are returned. SDD/admin see all authorized completed work; employees see their assignments. Reopening a task returns it to active work without removing its update history. This endpoint uses existing task columns and needs no additional schema migration. Deploy the backend route before the frontend that calls it. The earlier email-verification schema upgrade remains separately required if those pending changes are included.
+
+Back navigates through sections visited during this signed-in session; it is disabled when there is no previous section. Dialog Back returns to its parent view. Browser history and cross-refresh navigation are not changed.
+
+## New assignment alerts
+
+Tasks created by the SDD or administrator generate an unread notification for the assignee. New assignment notifications use the stable `assignment:<task UUID>` identifier in the existing notification ID column, allowing the workspace response to include an authorized task link without a schema change or title matching. Older notifications without that identifier remain in the notification inbox. The Overview alert appears only for unread assignments still owned by the current user, excluding completed and removed tasks. View task and Dismiss alert mark the notification read in the database; neither completes the task. The existing five-second workspace poll updates alerts while signed in; offline users see unread alerts after login. Browser push remains a separate opt-in delivery channel. Deploy frontend and backend together for new assignment links.
+
+## Office workspace expansion (19 October 2026)
+
+Before deploying this version, run the additive workspace schema upgrade and follow OFFICE-ROLLOUT.md. The new backend intentionally refuses to start against a database missing workspace_items. Email recovery, reminders, recurring work and backups require the configuration and operational checks documented there.
