@@ -74,3 +74,11 @@ The script decrypts, restores and reopens a new SQLite database, refuses to over
 - Create an encrypted backup, restore to a fresh test file and retain an off-host copy.
 
 Local automated checks cover the API workflows, authorization, record serialization, SQLite persistence, scheduler deduplication, recovery and encrypted backup restoration. Live mail, cloud migration, provider scheduling, off-host backup storage and hosted browser push need deployment configuration and acceptance checks.
+
+## Meeting agenda and summary (26 October 2026)
+
+Open Meetings > Agenda & summary on any meeting card, including past or cancelled meetings. SDD/Admin use Edit summary to save discussion notes, decisions and action items (including owners and due dates). Edit the agenda through Edit meeting. Invited participants can view the saved record; unrelated employees cannot. Revision checks prevent overwriting another editor's newer notes. Participants receive an update notification.
+
+Print / Save PDF opens the browser print dialog; choose Save as PDF. The export uses freshly fetched saved data, including meeting details, invitation responses, agenda, summary, decisions, actions and revision information. It supports multi-page text and does not treat invitation responses as actual attendance.
+
+Records use the existing workspace_items table and are included in normal database persistence and backups. No additional schema migration is needed if the office workspace upgrade has already run. Deploy both frontend and backend together.

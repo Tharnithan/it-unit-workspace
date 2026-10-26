@@ -121,3 +121,6 @@ Add newly discussed ideas here until the project owner confirms their scope.
 - 15 October 2026 — Created at the project owner's request. Recorded the proposed office workspace improvements and a process for tracking future confirmations. No application changes made.
 
 
+
+- 26 October 2026 — Meeting agenda and summary confirmed and implemented locally: SDD/Admin editing, participant viewing, database persistence, revision conflict checks, notifications and Print / Save PDF export. Backend tests, browser workflow and two-page PDF visual checks passed. Not deployed.
+

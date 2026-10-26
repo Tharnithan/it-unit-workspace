@@ -58,3 +58,6 @@
 
 .office-section .task-table th,.office-section .task-table td{color:#526471}.workspace-popup .message-meta{color:#526471}
 @media(max-width:760px){body:has(.workspace-popup) .toast{bottom:auto;top:90px;pointer-events:none}}
+
+.meeting-record h3{margin:22px 0 8px}.meeting-record p{overflow-wrap:anywhere;margin-bottom:12px}.meeting-record-actions{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}.meeting-record textarea{width:100%}.meeting-record .error{display:block}.meeting-record .error button{display:block;margin-top:10px}
+.full-meeting .meeting-record p{color:#365165}.meeting-record .muted{font-size:14px}
