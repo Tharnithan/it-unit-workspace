@@ -76,3 +76,8 @@ Tasks created by the SDD or administrator generate an unread notification for th
 ## Office workspace expansion (19 October 2026)
 
 Before deploying this version, run the additive workspace schema upgrade and follow OFFICE-ROLLOUT.md. The new backend intentionally refuses to start against a database missing workspace_items. Email recovery, reminders, recurring work and backups require the configuration and operational checks documented there.
+
+### Reverse proxy and rate limiting
+
+The backend trusts one proxy hop when Render sets RENDER=true. Direct local hosting trusts zero hops. TRUST_PROXY_HOPS can explicitly override this with an integer from 0 to 5. Keep the hop count aligned with the actual proxy chain; do not increase it merely to silence a warning, and do not expose the app directly when configured to trust forwarded headers. This setting is applied before all rate limiters. Verify the client IP in your hosting topology if additional proxies are introduced.
+

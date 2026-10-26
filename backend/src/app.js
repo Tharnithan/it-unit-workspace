@@ -1,4 +1,5 @@
 import {registerOffice} from './routes/office.js';
+import {proxyHops} from './proxy.js';
 import {registerAttachments} from './routes/attachments.js';
 import {registerRecovery} from './recovery.js';
 import {put,item,conversationAllowed,publicMessage,publicConversation} from './office-data.js';
@@ -12,6 +13,7 @@ import express from 'express';import helmet from 'helmet';import rateLimit from 
 import {canManage,canWork,publicUser,verify,hash,id,now,divisions} from './store.js';
 import {setupPush} from './push.js';
 export function createApp(store,{mailer=emailSender()}={}){const app=express();const {db,save}=store;
+ app.set('trust proxy',proxyHops());
  const push=setupPush(store);app.locals.push=push;
  app.use(helmet());app.use(express.json({limit:'3mb'}));
  const allowedOrigins=(process.env.CORS_ORIGINS||'').split(',').map(origin=>origin.trim()).filter(Boolean);
