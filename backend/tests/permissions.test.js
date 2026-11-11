@@ -4,6 +4,15 @@ test('API enforces task ownership, completion notes, private chat and directory 
  const login=async(username)=>(await call('/login','POST',{username,password:'ITunit-demo-2026!'})).data.token;
  const sdd=await login('itunit1'),insaf=await login('itunit2'),damith=await login('itunit3'),admin=await login('admin');
  assert.equal((await call('/workspace')).status,401);
+ const roles=['AD','Network Engineer','SE Intern','Technical Assistant','Technician','MA'];
+ const member={username:'new-staff',password:'Test-member-password-2026!'};
+ assert.equal((await call('/users','POST',{...member,title:'Employee'},sdd)).status,400);
+ assert.equal((await call('/users','POST',{...member,title:'AD'},insaf)).status,403);
+ for(const [index,title] of roles.entries()){
+  const created=await call('/users','POST',{...member,username:member.username+index,title},index%2?sdd:admin);
+  assert.equal(created.status,201);
+  assert.equal(created.data.name,title);
+ }
  assert.equal((await call('/tasks/t0','PATCH',{status:'Completed',note:'done'},damith)).status,403);
  assert.equal((await call('/tasks/t0','PATCH',{status:'Completed'},insaf)).status,400);
  assert.equal((await call('/tasks/t0','PATCH',{status:'Completed',note:'Network restored'},insaf)).status,200);
@@ -13,8 +22,39 @@ test('API enforces task ownership, completion notes, private chat and directory 
  assert.equal(db.tasks[0].completedBy,'u0');assert.equal(db.tasks[0].progress,100);
  assert.equal((await call('/tasks/t0','PATCH',{status:'Assigned',note:'Recheck'},insaf)).status,403);
  assert.equal((await call('/tasks/t0','PATCH',{status:'Assigned',note:'Recheck'},sdd)).status,200);
- assert.equal((await call('/tasks/t0','PATCH',{assignee:'u2'},sdd)).status,200);
+ assert.equal((await call('/tasks/t0','PATCH',{assignee:'u2'},sdd)).status,400);
+ assert.equal((await call('/tasks/t0/reassign','POST',{assignees:['u2'],processor:'u1',details:'Diagnosed the issue',reason:'Continue with the next person'},sdd)).status,200);
  assert.equal((await call('/tasks/t0','PATCH',{progress:50},insaf)).status,403);
+ for(const [designation,manager] of [['AD',damith],['Network Engineer',insaf]]){
+  const user=db.users.find(u=>u.id===(manager===damith?'u2':'u1'));
+  const oldTitle=user.title;
+  user.title=designation;
+  const assigned=await call('/tasks','POST',{title:designation,assignees:['u3'],divisions:['Metrology'],due:'2026-12-01',priority:'High'},manager);
+  assert.equal(assigned.status,201);
+  const path='/tasks/'+assigned.data.id;
+  const employee=await login('itunit4');
+  assert.equal((await call(path,'PATCH',{status:'Completed',note:'Restored service'},employee)).status,200);
+  assert.equal((await call(path+'/review','POST',{decision:'Changes requested',note:'Recheck connection'},manager)).status,200);
+  assert.equal((await call(path+'/reassign','POST',{assignees:['u2'],processor:'u3',details:'Restored service'},manager)).status,400);
+  const reassigned=await call(path+'/reassign','POST',{assignees:['u2'],processor:'u3',details:'Restored service',reason:'Follow up with the user'},manager);
+  assert.equal(reassigned.status,200);
+  assert.match(reassigned.data.updates.at(-1).note,/Work done: Restored service\nReason: Follow up with the user/);
+  assert.equal((await call('/users/u3','PATCH',{name:'Changed'},manager)).status,403);
+  const canManageMembers=designation==='AD';
+  assert.equal((await call('/workspace','GET',undefined,manager)).data.user.canManageMembers,canManageMembers);
+  const memberPath='/users/u4';
+  assert.equal((await call(memberPath,'PATCH',{active:false},manager)).status,canManageMembers?200:403);
+  assert.equal((await call(memberPath,'PATCH',{active:true},manager)).status,canManageMembers?200:403);
+  assert.equal((await call(memberPath,'DELETE',undefined,manager)).status,canManageMembers?200:403);
+  const createdMember=await call('/users','POST',{...member,title:'Technician'},manager);
+  assert.equal(createdMember.status,canManageMembers?201:403);
+  if(canManageMembers){
+   assert.equal((await call(memberPath,'PATCH',{active:true},admin)).status,404);
+   assert.equal((await call('/workspace','GET',undefined,admin)).data.users.some(u=>u.id==='u4'),false);
+   assert.equal(db.users.find(u=>u.id==='u4').password,'');
+  }
+  user.title=oldTitle;
+ }
  const c=(await call('/conversations','POST',{member:'u1'},sdd)).data;
  assert.equal((await call('/messages','POST',{conversation:c.id,body:'Private'},sdd)).status,201);
  assert.equal((await call('/messages','POST',{conversation:c.id,body:'Intrusion'},damith)).status,403);

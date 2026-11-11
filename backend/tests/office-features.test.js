@@ -67,7 +67,7 @@ test('chat replies, search, read markers, reactions, mentions, task channels and
  await call('/messages/'+notice.id+'/actions',employee,'PATCH',{action:'acknowledge'});await call('/messages/'+notice.id+'/actions',employee,'PATCH',{action:'acknowledge'});assert.deepEqual(item(db,'message',notice.id).acknowledged,['u1']);
  const taskChat=(await call('/tasks/t0/conversation',employee,'POST',{})).data;
  assert.equal((await call('/messages',other,'POST',{conversation:taskChat.id,body:'No access'})).status,403);
- await call('/tasks/t0',sdd,'PATCH',{assignee:'u2',note:'Reassign'});
+ assert.equal((await call('/tasks/t0/reassign',sdd,'POST',{assignees:['u2'],processor:'u1',details:'Diagnosed the issue',reason:'Continue with the next person'})).status,200);
  assert.equal((await call('/messages',employee,'POST',{conversation:taskChat.id,body:'Lost access'})).status,403);
  assert.equal((await call('/messages',other,'POST',{conversation:taskChat.id,body:'New assignee'})).status,201);
  assert.equal((await call('/preferences',employee,'PUT',{muted:[c.id],quietStart:'22:00',quietEnd:'07:00',availability:'Busy'})).status,200);

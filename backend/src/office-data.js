@@ -1,4 +1,4 @@
-import {id,now,canManage,canWork} from './store.js';
+import {id,now,accountRole,canManage,canWork} from './store.js';
 
 export function items(db,kind){db.workspaceItems??=[];return db.workspaceItems.filter(x=>x.kind===kind)}
 export function item(db,kind,key){return items(db,kind).find(x=>x.key===key)}
@@ -27,5 +27,22 @@ export function quietNow(p,at=Date.now()){
 }
 export function notifyAllowed(db,userId,conversationId){const p=preferences(db,userId);return !(conversationId&&p.muted?.includes(conversationId))&&!quietNow(p)}
 export function publicMessage(db,m){const meta=item(db,'message',m.id)||{};return {...m,replyTo:meta.replyTo||'',mentions:meta.mentions||[],reactions:meta.reactions||{},pinned:!!meta.pinned,acknowledged:meta.acknowledged||[]}}
-export function publicConversation(db,u,c){const meta=item(db,'conversation',c.id)||{},read=item(db,'read',u.id+':'+c.id);return {...c,...((meta.taskId||meta.announcement)?{members:db.users.filter(v=>v.active&&conversationAllowed(db,v,c)).map(v=>v.id)}:{}),...(meta.taskId?{taskId:meta.taskId}:{}),announcement:!!meta.announcement,unread:db.messages.filter(m=>m.conversation===c.id&&m.sender!==u.id&&(!read||Date.parse(m.at)>Date.parse(read.at))).length}}
+export function publicConversation(db,u,c){const meta=item(db,'conversation',c.id)||{},read=item(db,'read',u.id+':'+c.id);return {...c,...(c.type==='direct'?{name:accountRole(db.users.find(v=>v.id===c.members.find(id=>id!==u.id)))}:{}),...((meta.taskId||meta.announcement)?{members:db.users.filter(v=>v.active&&conversationAllowed(db,v,c)).map(v=>v.id)}:{}),...(meta.taskId?{taskId:meta.taskId}:{}),announcement:!!meta.announcement,unread:db.messages.filter(m=>m.conversation===c.id&&m.sender!==u.id&&(!read||Date.parse(m.at)>Date.parse(read.at))).length}}
 export function attachmentInfo(a){const {data,...info}=a;return info}
+
+export function publicTask(db,task){
+ const rolesByName=new Map(db.users.map(user=>[user.name,accountRole(user)]));
+ const role=name=>rolesByName.get(name)||name;
+ const updates=task.updates.map(update=>{
+  if(!update.note?.startsWith('Reassigned from '))return update;
+  const lines=update.note.split('\n');
+  if(!lines[1]?.startsWith('Processed by: '))return update;
+  lines[0]=lines[0].replace(/^Reassigned from (.+) to (.+)\.$/,(_,from,to)=>
+   'Reassigned from '+from.split(', ').map(role).join(', ')+' to '+to.split(', ').map(role).join(', ')+'.');
+  lines[1]='Processed by: '+role(lines[1].slice(14));
+  return {...update,note:lines.join('\n')};
+ });
+ const completionSnapshot=task.completionSnapshot&&{...task.completionSnapshot,
+  name:rolesByName.get(task.completionSnapshot.name)||accountRole(db.users.find(user=>user.id===task.assignee))};
+ return {...task,updates,completionSnapshot};
+}

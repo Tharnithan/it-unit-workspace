@@ -1,16 +1,24 @@
-import {item,put} from '../office-data.js';
-import {canManage,canWork,publicUser,hash,id,now,divisions} from '../store.js';
+import {item,put,validDay} from '../office-data.js';
+import {accountRole,canManage,id,now} from '../store.js';
 export function registerMeetingsRoutes(app,context){
  const {db,save,error,text,note,audit}=context;
  const visible=(u,m)=>m&&(canManage(u)||m.attendees.includes(u.id));
- const record=m=>{const n=item(db,'meetingNotes',m.id);return {meeting:{...m},attendees:m.attendees.map(id=>({id,name:db.users.find(u=>u.id===id)?.name||'Former member',response:m.responses[id]||'Pending'})),notes:{summary:n?.summary||'',decisions:n?.decisions||'',actions:n?.actions||'',version:n?.version||0,updatedAt:n?.updatedAt||null,updatedBy:db.users.find(u=>u.id===n?.updatedBy)?.name||null}}};
+ const columns={matter:12000,decision:8000,responsibilities:8000,dueDate:10,remarks:8000};
+ const validRows=rows=>Array.isArray(rows)&&rows.length<=50&&rows.every(row=>row&&
+  Object.entries(columns).every(([key,max])=>typeof row[key]==='string'&&row[key].length<=max)&&
+  (!row.dueDate||validDay(row.dueDate)));
+ const record=m=>{const n=item(db,'meetingNotes',m.id);return {meeting:{...m},attendees:m.attendees.map(id=>({id,name:accountRole(db.users.find(u=>u.id===id)),response:m.responses[id]||'Pending'})),notes:{...(n?.rows?{rows:n.rows}:{}),summary:n?.summary||'',decisions:n?.decisions||'',actions:n?.actions||'',version:n?.version||0,updatedAt:n?.updatedAt||null,updatedBy:n?.updatedBy?accountRole(db.users.find(u=>u.id===n.updatedBy)):null}}};
  app.get('/api/meetings/:id/record',(req,res)=>{const m=db.meetings.find(m=>m.id===req.params.id);if(!visible(req.user,m))return error(res,404,'Meeting not found');res.setHeader('Cache-Control','no-store');res.json(record(m))});
  app.put('/api/meetings/:id/record',async(req,res)=>{
   if(!canManage(req.user))return error(res,403,'Only SDD or Admin can save meeting notes');
   const m=db.meetings.find(m=>m.id===req.params.id);if(!m)return error(res,404,'Meeting not found');const b=req.body;
-  for(const [key,max] of [['summary',12000],['decisions',8000],['actions',8000]])if(typeof b[key]!=='string'||b[key].length>max)return error(res,400,'Enter valid meeting notes within the displayed limits');
+  if(b.rows!==undefined&&!validRows(b.rows))return error(res,400,'Enter up to 50 summary rows with valid due dates');
+  if(b.rows===undefined)for(const [key,max] of [['summary',12000],['decisions',8000],['actions',8000]])if(typeof b[key]!=='string'||b[key].length>max)return error(res,400,'Enter valid meeting notes within the displayed limits');
   const previous=item(db,'meetingNotes',m.id);if(!Number.isInteger(b.version)||b.version!==(previous?.version||0))return error(res,409,'These notes changed. Reload the saved record before editing again.');
-  put(db,'meetingNotes',m.id,{summary:b.summary.trim(),decisions:b.decisions.trim(),actions:b.actions.trim(),version:b.version+1,updatedBy:req.user.id,updatedAt:now()});
+  const notes=b.rows===undefined
+   ?{rows:null,summary:b.summary.trim(),decisions:b.decisions.trim(),actions:b.actions.trim()}
+   :{rows:b.rows.map(row=>Object.fromEntries(Object.keys(columns).map(key=>[key,row[key].trim()]))).filter(row=>Object.values(row).some(Boolean)),summary:'',decisions:'',actions:''};
+  put(db,'meetingNotes',m.id,{...notes,version:b.version+1,updatedBy:req.user.id,updatedAt:now()});
   audit(req.user,'meeting.notes.updated',m.id);note(m.attendees,'Meeting summary updated',m.title);await save();res.json(record(m));
  });
 

@@ -21,8 +21,12 @@ test('MySQL stores API work, isolates concurrent requests, rolls back failures a
   async function login(username,password='ITunit-demo-2026!'){const r=await call('/login','POST',{username,password});assert.equal(r.status,200);return r.body.token}
   const sdd=await login('itunit1');const employee=await login('itunit2');const administrator=await login('admin');
   const title="Network 'check'; SELECT * — පරීක්ෂණ 🔔";
-  const task=await call('/tasks','POST',{title,description:'Integration test',assignee:'u1',division:'Laboratory Services',due:'2026-12-31',priority:'High'},sdd);
+  const task=await call('/tasks','POST',{title,description:'Integration test',assignees:['u1','u2'],divisions:['Laboratory Services','Metrology'],due:'2026-12-31',priority:'High'},sdd);
   assert.equal(task.status,201);
+  const secondAssignee=await login('itunit3');
+  const workspace=await call('/workspace','GET',undefined,secondAssignee);
+  assert.deepEqual(workspace.body.tasks.find(t=>t.id===task.body.id).divisions,['Laboratory Services','Metrology']);
+  assert.ok(workspace.body.notifications.some(n=>n.taskId===task.body.id));
   const complete=await call('/tasks/'+task.body.id,'PATCH',{status:'Completed',note:'Verified on MySQL'},employee);assert.equal(complete.status,200);
   assert.equal((await call('/tasks/'+task.body.id+'/review','POST',{decision:'Approve',note:'Reviewed on MySQL'},sdd)).status,200);
   const [stored]=await admin.execute(`SELECT title,status,resolution FROM \`${database}\`.tasks WHERE id=?`,[task.body.id]);

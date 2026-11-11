@@ -61,3 +61,18 @@
 
 .meeting-record h3{margin:22px 0 8px}.meeting-record p{overflow-wrap:anywhere;margin-bottom:12px}.meeting-record-actions{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}.meeting-record textarea{width:100%}.meeting-record .error{display:block}.meeting-record .error button{display:block;margin-top:10px}
 .full-meeting .meeting-record p{color:#365165}.meeting-record .muted{font-size:14px}
+
+.modal:has(.meeting-record){width:1040px}
+.meeting-summary-table{width:100%;min-width:760px;table-layout:fixed}
+.meeting-record form .meeting-summary-table{min-width:900px}
+.meeting-summary-table td{vertical-align:top;overflow-wrap:anywhere}
+.meeting-summary-table input,.meeting-summary-table textarea{width:100%;min-width:0}
+
+.task-checkbox-group{min-inline-size:0;margin:0 0 16px;padding:8px 12px 12px;border:1px solid #dbe5ed;border-radius:12px;background:#f8fafc}
+.task-checkbox-group legend{padding:0 5px;font-size:15px;font-weight:650}
+.task-checkbox-group label{display:grid;grid-template-columns:17px minmax(0,1fr);align-items:start;gap:10px;margin:0;padding:7px 8px;border-radius:6px;font-size:14px;font-weight:500;line-height:1.4;cursor:pointer}
+.task-checkbox-group input[type=checkbox]{width:17px;height:17px;margin:1px 0 0;padding:0;accent-color:var(--teal)}
+.task-checkbox-group .task-checkbox-all{margin-bottom:5px;background:#e7f2f0;font-weight:650}
+.task-checkbox-group .task-checkbox-option:hover,.task-checkbox-group .task-checkbox-option:has(input:checked){background:#edf4f7}
+.task-checkbox-group label:focus-within{outline:2px solid var(--teal);outline-offset:-2px}
+.task-checkbox-group span{overflow-wrap:anywhere}

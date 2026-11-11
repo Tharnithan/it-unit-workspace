@@ -21,5 +21,21 @@ export function createStore(path=process.env.DATA_FILE||fileURLToPath(new URL('.
  let db;if(sqlite.prepare('SELECT count(*) AS count FROM users').get().count){db=Object.fromEntries(entities.map(entity=>[entity,sqlite.prepare(`SELECT data FROM "${entity}" ORDER BY rowid`).all().map(row=>JSON.parse(row.data))]))}else {const legacy=fileURLToPath(new URL('../data/workspace.json',import.meta.url));db=existsSync(legacy)?JSON.parse(readFileSync(legacy,'utf8')):seed()}
  const save=()=>{sqlite.exec('BEGIN IMMEDIATE');try{for(const entity of entities){sqlite.exec(`DELETE FROM "${entity}"`);const insert=sqlite.prepare(`INSERT INTO "${entity}" (id,data) VALUES (?,?)`);for(const [index,record] of (db[entity]||[]).entries())insert.run(record.id||record.token||record.subscription?.endpoint||String(index),JSON.stringify(record))}sqlite.exec('COMMIT')}catch(e){sqlite.exec('ROLLBACK');throw e}};save();return {db,save,close:()=>sqlite.close()};}
 export const canManage=u=>u.role==='sdd'||u.role==='admin';
-export const canWork=(u,t)=>canManage(u)||t.assignee===u.id;
-export const publicUser=({password,emailVerification,...u})=>({...u,emailVerified:!!emailVerification?.verifiedAt&&emailVerification.email===u.email?.trim().toLowerCase()});
+export const canManageMembers=u=>canManage(u)||/^(ad|assistant director)(?:$|\s*[(–-])/i.test(u.title?.trim()||'');
+export const memberDeleted=u=>!u.active&&u.username.startsWith('!deleted-');
+export const canManageTasks=u=>canManage(u)||/^(ad|assistant director|network engineer)(?:$|\s*[(–-])/i.test(u.title?.trim()||"");
+export const taskAssignees=t=>t.assignees||[t.assignee];
+export const taskDivisions=t=>t.divisions||[t.division];
+export const canWork=(u,t)=>canManageTasks(u)||taskAssignees(t).includes(u.id);
+export const memberRoles=['AD','Network Engineer','SE Intern','Technical Assistant','Technician','MA'];
+export function accountRole(user){
+ if(!user||memberDeleted(user))return 'Former member';
+ if(user.role==='sdd')return 'SDD';
+ if(user.role==='admin')return 'Admin';
+ if(canManageTasks(user))return /network engineer/i.test(user.title)?'Network Engineer':'AD';
+ const title=user.title?.trim();
+ if(/^management assistant$/i.test(title))return 'MA';
+ return memberRoles.find(role=>role.toLowerCase()===title?.toLowerCase())||
+  (title&&!/^employee$/i.test(title)?title:'Role pending');
+}
+export const publicUser=({password,emailVerification,...u})=>({...u,name:accountRole(u),emailVerified:!!emailVerification?.verifiedAt&&emailVerification.email===u.email?.trim().toLowerCase()});

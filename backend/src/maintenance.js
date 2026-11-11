@@ -1,4 +1,4 @@
-import {id,now,canManage} from './store.js';
+import {id,now,canManage,canManageTasks,taskAssignees} from './store.js';
 import {items,item,put,day} from './office-data.js';
 import {writeBackup} from './backups.js';
 export function nextDate(value,frequency){const d=new Date(value+'T00:00:00Z');if(frequency==='Monthly'){const n=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+1);const end=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(n,end))}else d.setUTCDate(d.getUTCDate()+(frequency==='Weekly'?7:1));return d.toISOString().slice(0,10)}
@@ -14,7 +14,7 @@ export async function maintain(store,context,at=Date.now()){
  for(const t of db.tasks.filter(t=>!t.deleted&&t.status!=='Completed')){
   const days=Math.round((Date.parse(t.due)-Date.parse(today))/86400000);if(days>1||item(db,'approval',t.id)?.status==='Pending')continue;
   const key=t.id+':'+t.due+':'+today;if(item(db,'reminder',key))continue;
-  const recipients=days<0?[t.assignee,...db.users.filter(u=>u.active&&canManage(u)).map(u=>u.id)]:[t.assignee];
+  const recipients=days<0?[...taskAssignees(t),...db.users.filter(u=>u.active&&canManageTasks(u)).map(u=>u.id)]:taskAssignees(t);
   note(recipients,days<0?'Task overdue':days===0?'Task due today':'Task due tomorrow',t.priority+' priority: '+t.title);put(db,'reminder',key,{at:now()});changed=true;
  }
  if(changed)await save();

@@ -42,5 +42,11 @@ export function fromRecords(rows){
  db.pushSubscriptions=rows.push_subscriptions.map(s=>({userId:s.user_id,subscription:{endpoint:s.endpoint,expirationTime:s.expiration_time==null?null:Number(s.expiration_time),keys:{p256dh:s.p256dh,auth:s.auth}}}));
  db.pushOutbox=rows.push_outbox.map(n=>({id:n.id,recipient:n.recipient_id,title:n.title,attempts:n.attempts,next:Date.parse(iso(n.next_attempt_at))}));
  db.workspaceItems=(rows.workspace_items||[]).map(row=>JSON.parse(row.payload));
+
+ const assignments=new Map(db.workspaceItems.filter(item=>item.kind==='taskAssignment').map(item=>[item.key,item]));
+ for(const task of db.tasks){
+  const assignment=assignments.get(task.id);
+  if(assignment){task.assignees=assignment.assignees;task.divisions=assignment.divisions}
+ }
  return db;
 }

@@ -25,5 +25,11 @@ test('meeting notes restrict access, prevent stale edits and survive database re
  assert(store.db.notifications.some(n=>n.recipient==='u1'&&n.title==='Meeting summary updated'));
  assert(store.db.audit.some(a=>a.action==='meeting.notes.updated'));
  const roundtrip=fromRecords(toRecords(store.db));assert.equal(roundtrip.workspaceItems.find(n=>n.kind==='meetingNotes').actions,notes.actions);
- store.close();store=createStore(path);assert.equal(store.db.workspaceItems.find(n=>n.kind==='meetingNotes').summary,notes.summary);
+ const rows=[{matter:'Network outage',decision:'Replace switch',responsibilities:'Network Engineer',dueDate:'2026-10-30',remarks:'Notify affected staff'}];
+ assert.equal((await call('u0','PUT',{version:1,rows:[{...rows[0],dueDate:'2026-02-30'}]})).status,400);
+ assert.equal((await call('u0','PUT',{version:1,rows})).status,200);
+ assert.equal((await call('u11','PUT',{version:1,rows})).status,409);
+ assert.deepEqual((await call('u1')).data.notes.rows,rows);
+ store.close();store=createStore(path);
+ assert.deepEqual(store.db.workspaceItems.find(n=>n.kind==='meetingNotes').rows,rows);
 });

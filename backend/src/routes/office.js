@@ -1,5 +1,5 @@
-import {id,now,canManage,canWork,divisions} from '../store.js';
-import {items,item,put,add,day,validDay,targetAllowed,attachmentInfo,preferences,conversationAllowed} from '../office-data.js';
+import {accountRole,id,now,canManage,canManageTasks,taskAssignees,canWork,divisions} from '../store.js';
+import {publicTask,items,item,put,add,day,validDay,targetAllowed,attachmentInfo,preferences,conversationAllowed} from '../office-data.js';
 
 export function registerOffice(app,{db,save,error,text,note,audit}){
  const managers=()=>db.users.filter(u=>u.active&&canManage(u)).map(u=>u.id);
@@ -11,7 +11,7 @@ export function registerOffice(app,{db,save,error,text,note,audit}){
   const completed=tasks.filter(t=>t.status==='Completed'&&t.completedAt);
   const turnaround=completed.map(t=>(Date.parse(t.completedAt)-Date.parse(t.createdAt))/3600000).filter(n=>Number.isFinite(n)&&n>=0);
   const categories=Object.fromEntries(['Computer','Network','Software','Other'].map(c=>[c,requests.filter(r=>r.category===c).length]));
-  res.json({requests,assets:items(db,'asset').filter(a=>manager||a.assignee===u.id),articles:items(db,'article').filter(a=>manager||a.published),schedules:manager?items(db,'schedule'):[],preferences:preferences(db,u.id),workload:manager?db.users.filter(u=>u.active).map(u=>({id:u.id,name:u.name,availability:preferences(db,u.id).availability||'Available',active:db.tasks.filter(t=>!t.deleted&&t.assignee===u.id&&t.status!=='Completed').length,overdue:db.tasks.filter(t=>!t.deleted&&t.assignee===u.id&&t.status!=='Completed'&&t.due<day()).length})):[],report:{completed:completed.length,unresolved:requests.filter(r=>r.status!=='Resolved').length,averageHours:turnaround.length?Math.round(turnaround.reduce((a,b)=>a+b,0)/turnaround.length*10)/10:null,categories},approvals:items(db,'approval').filter(a=>tasks.some(t=>t.id===a.key)),backup:manager?{configured:!!(process.env.BACKUP_DIR&&process.env.BACKUP_KEY),last:item(db,'system','backup')?.at||null}:null});
+  res.json({requests,assets:items(db,'asset').filter(a=>manager||a.assignee===u.id),articles:items(db,'article').filter(a=>manager||a.published),schedules:manager?items(db,'schedule'):[],preferences:preferences(db,u.id),workload:manager?db.users.filter(u=>u.active).map(u=>({id:u.id,name:accountRole(u),availability:preferences(db,u.id).availability||'Available',active:db.tasks.filter(t=>!t.deleted&&taskAssignees(t).includes(u.id)&&t.status!=='Completed').length,overdue:db.tasks.filter(t=>!t.deleted&&taskAssignees(t).includes(u.id)&&t.status!=='Completed'&&t.due<day()).length})):[],report:{completed:completed.length,unresolved:requests.filter(r=>r.status!=='Resolved').length,averageHours:turnaround.length?Math.round(turnaround.reduce((a,b)=>a+b,0)/turnaround.length*10)/10:null,categories},approvals:items(db,'approval').filter(a=>tasks.some(t=>t.id===a.key)),backup:manager?{configured:!!(process.env.BACKUP_DIR&&process.env.BACKUP_KEY),last:item(db,'system','backup')?.at||null}:null});
  });
  app.post('/api/requests',async(req,res)=>{
   const b=req.body;if(!text(b.title)||!text(b.description,5000)||!divisions.includes(b.division)||!['Computer','Network','Software','Other'].includes(b.category))return error(res,400,'Enter a title, description, division and category');
@@ -28,12 +28,12 @@ export function registerOffice(app,{db,save,error,text,note,audit}){
  });
  app.post('/api/tasks/:id/comments',async(req,res)=>{if(!targetAllowed(db,req.user,'task',req.params.id))return error(res,404,'Task not found');if(!text(req.body.body,4000))return error(res,400,'Write a comment');const c=add(db,'comment',{taskId:req.params.id,actor:req.user.id,body:text(req.body.body,4000)});audit(req.user,'task.comment',req.params.id);await save();res.status(201).json(c)});
  app.post('/api/tasks/:id/review',async(req,res)=>{
-  if(!canManage(req.user))return error(res,403,'Only SDD or Admin can review work');const t=db.tasks.find(t=>t.id===req.params.id&&!t.deleted),a=item(db,'approval',req.params.id);if(!t||a?.status!=='Pending')return error(res,409,'No completion is awaiting review');if(!['Approve','Changes requested'].includes(req.body.decision)||!text(req.body.note,4000))return error(res,400,'Choose a decision and enter a review note');
+  if(!canManageTasks(req.user))return error(res,403,'Task review access required');const t=db.tasks.find(t=>t.id===req.params.id&&!t.deleted),a=item(db,'approval',req.params.id);if(!t||a?.status!=='Pending')return error(res,409,'No completion is awaiting review');if(!['Approve','Changes requested'].includes(req.body.decision)||!text(req.body.note,4000))return error(res,400,'Choose a decision and enter a review note');
   a.status=req.body.decision==='Approve'?'Approved':'Changes requested';a.reviewedBy=req.user.id;a.reviewedAt=now();a.reviewNote=text(req.body.note,4000);
-  t.status=a.status==='Approved'?'Completed':'In Progress';if(t.status==='Completed'){t.progress=100;t.completedAt=now();t.completedBy=req.user.id;t.resolution=a.note;t.completionSnapshot={name:db.users.find(u=>u.id===t.assignee)?.name,division:t.division}}else{t.progress=Math.min(t.progress,95)}
+  t.status=a.status==='Approved'?'Completed':'In Progress';if(t.status==='Completed'){t.progress=100;t.completedAt=now();t.completedBy=req.user.id;t.resolution=a.note;t.completionSnapshot={name:accountRole(db.users.find(u=>u.id===a.submittedBy)),division:t.division}}else{t.progress=Math.min(t.progress,95)}
   t.updates.push({id:id(),actor:req.user.id,note:a.reviewNote,progress:t.progress,status:t.status,at:now()});t.events.push({status:t.status,actor:req.user.id,assignee:t.assignee,at:now()});
   for(const r of items(db,'request').filter(r=>r.taskId===t.id)){r.status=t.status==='Completed'?'Resolved':'Assigned';note([r.requester],'Service request updated',r.number+': '+r.status)}
-  note([t.assignee],'Completion review',t.title+': '+a.status);audit(req.user,'task.reviewed',t.id);await save();res.json(t);
+  note(taskAssignees(t),'Completion review',t.title+': '+a.status);audit(req.user,'task.reviewed',t.id);await save();res.json(publicTask(db,t));
  });
  app.post('/api/tasks/:id/conversation',async(req,res)=>{
   if(!targetAllowed(db,req.user,'task',req.params.id))return error(res,404,'Task not found');const existing=items(db,'conversation').find(c=>c.taskId===req.params.id);let c=existing&&db.conversations.find(c=>c.id===existing.key);

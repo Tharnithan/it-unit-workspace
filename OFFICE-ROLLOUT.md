@@ -79,6 +79,6 @@ Local automated checks cover the API workflows, authorization, record serializat
 
 Open Meetings > Agenda & summary on any meeting card, including past or cancelled meetings. SDD/Admin use Edit summary to save discussion notes, decisions and action items (including owners and due dates). Edit the agenda through Edit meeting. Invited participants can view the saved record; unrelated employees cannot. Revision checks prevent overwriting another editor's newer notes. Participants receive an update notification.
 
-Print / Save PDF opens the browser print dialog; choose Save as PDF. The export uses freshly fetched saved data, including meeting details, invitation responses, agenda, summary, decisions, actions and revision information. It supports multi-page text and does not treat invitation responses as actual attendance.
+Download PDF saves a PDF file directly without opening the print dialog. The separate Print button opens printer options. Downloaded pages use browser-rendered text to preserve Unicode appearance; their text is not selectable. The export uses freshly fetched saved data, including meeting details, invitation responses, agenda, summary, decisions, actions and revision information. It supports multi-page text and does not treat invitation responses as actual attendance.
 
 Records use the existing workspace_items table and are included in normal database persistence and backups. No additional schema migration is needed if the office workspace upgrade has already run. Deploy both frontend and backend together.
